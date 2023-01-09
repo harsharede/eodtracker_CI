@@ -1,0 +1,61 @@
+# Docker
+# Build a Docker image
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+  branches:
+    include:
+      - dev
+      - release/*
+      - main
+
+resources:
+- repo: self
+
+variables:
+  tag: '$(Build.BuildId)'
+  imageName: 'image-$(Build.BuildId)'
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@0
+      displayName: build
+      inputs:
+        azureSubscription: 'Azure subscription 1 (ce38013f-6117-4fdc-b41d-d1d7356aa287)'
+        azureContainerRegistry: '{"loginServer":"eodtracker.azurecr.io", "id" : "/subscriptions/ce38013f-6117-4fdc-b41d-d1d7356aa287/resourceGroups/EOD_Tracker/providers/Microsoft.ContainerRegistry/registries/eodtracker"}'
+        imageName: 'image-$(Build.BuildId)'
+      env:
+        Test1: Test123
+
+    - task: Docker@0
+      displayName: 'Push an image'
+      inputs:
+        azureSubscription: 'Free Trial (ce38013f-6117-4fdc-b41d-d1d7356aa287)'
+        azureContainerRegistry: '{"loginServer":"eodtracker.azurecr.io", "id" : "/subscriptions/ce38013f-6117-4fdc-b41d-d1d7356aa287/resourceGroups/EOD_Tracker/providers/Microsoft.ContainerRegistry/registries/eodtracker"}'
+        action: 'Push an image'
+        imageName: 'image-$(Build.BuildId)'
+
+    - task: AzureWebAppContainer@1
+      displayName: 'Container Deploy: Prod'
+      inputs:
+        azureSubscription: 'Azure subscription 1 (ce38013f-6117-4fdc-b41d-d1d7356aa287)'
+        appName: edotracker
+        containers: 'eodtracker.azurecr.io/image-$(Build.BuildId)'
+        appSettings: '-imageid $(Build.BuildId)'
+      condition: contains(variables['build.sourceBranch'], 'refs/heads/main')
+
+    - task: AzureWebAppContainer@1
+      displayName: 'Container Deploy: Dev'
+      inputs:
+        azureSubscription: 'Azure subscription 1 (ce38013f-6117-4fdc-b41d-d1d7356aa287)'
+        appName: 'edotracker-dev'
+        containers: 'eodtracker.azurecr.io/image-$(Build.BuildId)'
+        appSettings: '-imageid $(Build.BuildId)'
+      condition: ne(variables['Build.SourceBranch'], 'refs/heads/main')
