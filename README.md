@@ -109,7 +109,7 @@ _____________
 
 ## Fork this repository
 
-+ Clone this repository to your local machine using git clone 
++ Clone this repository to your local machine using git clone. 
     ```
   git clone <git https url>
   ```
